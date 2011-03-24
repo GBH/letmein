@@ -1,13 +1,17 @@
 require 'test/unit'
 require 'active_record'
 require 'letmein'
+require 'sqlite3'
 
-ActiveRecord::Base.establish_connection(:adapter => "sqlite3", :database => ":memory:")
+ActiveRecord::Base.establish_connection(:adapter => 'sqlite3', :database => ':memory:')
 $stdout_orig = $stdout
 $stdout = StringIO.new
 
 class User < ActiveRecord::Base
-  letmein :name, :pass_crypt, :pass_salt
+  # example values for password info:
+  #   pass: $2a$10$0MeSaaE3I7.0FQ5ZDcKPJeD1.FzqkcOZfEKNZ/DNN.w8xOwuFdBCm
+  #   salt: $2a$10$0MeSaaE3I7.0FQ5ZDcKPJe
+  letmein :username, :pass_crypt, :pass_salt
 end
 
 class LetMeInTest < Test::Unit::TestCase
@@ -15,7 +19,7 @@ class LetMeInTest < Test::Unit::TestCase
     ActiveRecord::Base.logger
     ActiveRecord::Schema.define(:version => 1) do
       create_table :users do |t|
-        t.column :name,       :string
+        t.column :username,   :string
         t.column :pass_crypt, :string
         t.column :pass_salt,  :string
       end
@@ -28,7 +32,6 @@ class LetMeInTest < Test::Unit::TestCase
     end
   end
   
-  # -- Tests ----------------------------------------------------------------
   def test_configuration_defaults
     assert config = LetMeIn::Configuration.new
     assert_equal nil,             config.model
@@ -40,8 +43,59 @@ class LetMeInTest < Test::Unit::TestCase
   def test_configuration_initialization
     conf = LetMeIn.configuration
     assert_equal 'User',        conf.model
-    assert_equal 'name',        conf.identifier
+    assert_equal 'username',    conf.identifier
     assert_equal 'pass_crypt',  conf.password
     assert_equal 'pass_salt',   conf.salt
+  end
+  
+  def test_model_password_saving
+    user = User.new(:username => 'test', :password => 'test')
+    user.save!
+    user = User.find(user.id)
+    assert_equal nil, user.password
+    assert_match /.{60}/, user.pass_crypt
+    assert_match /.{29}/, user.pass_salt
+  end
+  
+  def test_session_initialization
+    session = LetMeIn::Session.new(:username => 'test_user', :password => 'test_pass')
+    assert_equal 'test_user', session.identifier
+    assert_equal 'test_user', session.username
+    assert_equal 'test_pass', session.password
+    
+    session.username = 'new_user'
+    assert_equal 'new_user', session.identifier
+    assert_equal 'new_user', session.username
+    
+    assert_equal nil, session.authenticated_object
+    assert_equal nil, session.user
+  end
+  
+  def test_session_authentication
+    user = User.create!(:username => 'test', :password => 'test')
+    session = LetMeIn::Session.create(:username => 'test', :password => 'test')
+    assert session.errors.blank?
+    assert_equal user, session.authenticated_object
+    assert_equal user, session.user
+  end
+  
+  def test_session_authentication_failure
+    user = User.create!(:username => 'test', :password => 'test')
+    session = LetMeIn::Session.create(:username => 'test', :password => 'bad_pass')
+    assert session.errors.present?
+    assert_equal 'Failure to authenticate', session.errors[:base].first
+    assert_equal nil, session.authenticated_object
+    assert_equal nil, session.user
+  end
+  
+  def test_session_authentication_exception
+    user = User.create!(:username => 'test', :password => 'test')
+    session = LetMeIn::Session.new(:username => 'test', :password => 'bad_pass')
+    begin
+      session.save!
+    rescue => e
+      assert_equal 'Failure to authenticate', e.to_s
+    end
+    assert_equal nil, session.authenticated_object
   end
 end
