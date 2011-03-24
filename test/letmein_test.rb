@@ -77,13 +77,14 @@ class LetMeInTest < Test::Unit::TestCase
     assert session.errors.blank?
     assert_equal user, session.authenticated_object
     assert_equal user, session.user
+    raise user.inspect
   end
   
   def test_session_authentication_failure
     user = User.create!(:username => 'test', :password => 'test')
     session = LetMeIn::Session.create(:username => 'test', :password => 'bad_pass')
     assert session.errors.present?
-    assert_equal 'Failure to authenticate', session.errors[:base].first
+    assert_equal 'Failed to authenticate', session.errors[:base].first
     assert_equal nil, session.authenticated_object
     assert_equal nil, session.user
   end

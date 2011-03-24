@@ -17,8 +17,8 @@ Jeweler::Tasks.new do |gem|
   gem.name        = 'letmein'
   gem.homepage    = 'http://github.com/GBH/letmein'
   gem.license     = 'MIT'
-  gem.summary     = 'Simple Authentication Engine'
-  gem.description = 'Simple Authentication Engine for Rails 3 applications'
+  gem.summary     = 'minimalistic authentication'
+  gem.description = 'minimalistic authentication'
   gem.email       = "oleg@khabarov.ca"
   gem.authors     = ['Oleg Khabarov']
   # Include your dependencies below. Runtime dependencies are required when using your gem,
