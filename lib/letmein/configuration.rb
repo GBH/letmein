@@ -15,7 +15,7 @@ class LetMeIn::Configuration
   
   # Configuration defaults
   def initialize
-    @model      = 'User'
+    @model      = nil
     @identifier = 'email'
     @password   = 'password_hash'
     @salt       = 'password_salt'

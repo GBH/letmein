@@ -1,4 +1,4 @@
-class Session
+class LetMeIn::Session
   
   include ActiveModel::Validations
   

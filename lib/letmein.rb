@@ -1,21 +1,27 @@
+require 'active_record'
+
 module LetMeIn
   
   require File.expand_path('letmein/configuration', File.dirname(__FILE__))
   
-  class << self
-    # Modify LetMeIn configuration
-    # Example:
-    #   LetMeIn.configure do |config|
-    #     config.model = 'Account'
-    #   end
-    def configure
-      yield configuration
+  def self.configuration
+    @configuration ||= LetMeIn::Configuration.new
+  end
+  
+  module Model
+    def self.included(base)
+      base.extend ClassMethods
     end
     
-    # Accessor for LetMeIn::Configuration
-    def configuration
-      @configuration ||= LetMeIn::Configuration.new
+    module ClassMethods
+      def letmein(*args)
+        LetMeIn.configuration.model       = self.to_s
+        LetMeIn.configuration.identifier  = args[0].to_s if args[0]
+        LetMeIn.configuration.password    = args[1].to_s if args[1]
+        LetMeIn.configuration.salt        = args[2].to_s if args[2]
+      end
     end
-    alias :config :configuration
   end
 end
+
+ActiveRecord::Base.send :include, LetMeIn::Model
