@@ -77,7 +77,6 @@ class LetMeInTest < Test::Unit::TestCase
     assert session.errors.blank?
     assert_equal user, session.authenticated_object
     assert_equal user, session.user
-    raise user.inspect
   end
   
   def test_session_authentication_failure
