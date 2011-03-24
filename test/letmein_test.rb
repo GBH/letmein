@@ -93,8 +93,8 @@ class LetMeInTest < Test::Unit::TestCase
     session = LetMeIn::Session.new(:username => 'test', :password => 'bad_pass')
     begin
       session.save!
-    rescue => e
-      assert_equal 'Failure to authenticate', e.to_s
+    rescue LetMeIn::Error => e
+      assert_equal 'Failed to authenticate', e.to_s
     end
     assert_equal nil, session.authenticated_object
   end

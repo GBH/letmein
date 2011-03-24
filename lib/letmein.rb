@@ -3,6 +3,9 @@ require 'bcrypt'
 
 module LetMeIn
   
+  class Error < StandardError
+  end
+  
   class Configuration
     attr_accessor :model, :identifier, :password, :salt
     
@@ -29,7 +32,7 @@ module LetMeIn
     end
     
     def save!
-      save || raise('Failure to authenticate')
+      save || raise(LetMeIn::Error, 'Failed to authenticate')
     end
     
     def self.create(params = {})
@@ -63,7 +66,7 @@ module LetMeIn
       self.authenticated_object = if object && object.send(LetMeIn.configuration.password) == BCrypt::Engine.hash_secret(self.password, object.send(LetMeIn.configuration.salt))
         object
       else
-        errors.add(:base, 'Failure to authenticate')
+        errors.add(:base, 'Failed to authenticate')
         nil
       end
     end
