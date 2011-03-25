@@ -70,10 +70,10 @@ module LetMeIn
         nil
       end
     end
-  end
-  
-  def self.configuration
-    @configuration ||= LetMeIn::Configuration.new
+    
+    def to_key
+      nil
+    end
   end
   
   module Model
@@ -102,6 +102,10 @@ module LetMeIn
         ^
       end
     end
+  end
+  
+  def self.configuration
+    @configuration ||= LetMeIn::Configuration.new
   end
 end
 
