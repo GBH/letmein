@@ -110,3 +110,7 @@ module LetMeIn
 end
 
 ActiveRecord::Base.send :include, LetMeIn::Model
+
+# Rails loads models on demand. Configuration doesn't set properly unless assosiated model
+# is already loaded. This will force it.
+Dir[Rails.root + 'app/models/**/*.rb'].each{|path| require path }
