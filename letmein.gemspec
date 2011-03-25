@@ -5,11 +5,11 @@
 
 Gem::Specification.new do |s|
   s.name = %q{letmein}
-  s.version = "0.0.0"
+  s.version = "0.0.1"
 
   s.required_rubygems_version = Gem::Requirement.new(">= 0") if s.respond_to? :required_rubygems_version=
   s.authors = ["Oleg Khabarov"]
-  s.date = %q{2011-03-24}
+  s.date = %q{2011-03-25}
   s.description = %q{minimalistic authentication}
   s.email = %q{oleg@khabarov.ca}
   s.extra_rdoc_files = [
@@ -23,6 +23,7 @@ Gem::Specification.new do |s|
     "README.md",
     "Rakefile",
     "VERSION",
+    "letmein.gemspec",
     "lib/letmein.rb",
     "test/letmein_test.rb"
   ]
