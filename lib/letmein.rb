@@ -3,6 +3,14 @@ require 'bcrypt'
 
 module LetMeIn
   
+  class Railtie < Rails::Railtie
+    config.after_initialize do
+      # Rails loads models on demand. Configuration doesn't set properly unless assosiated model
+      # is already loaded. This will force it.
+      Dir[Rails.root + 'app/models/**/*.rb'].each{|path| require path }
+    end
+  end
+  
   class Error < StandardError
   end
   
@@ -110,7 +118,3 @@ module LetMeIn
 end
 
 ActiveRecord::Base.send :include, LetMeIn::Model
-
-# Rails loads models on demand. Configuration doesn't set properly unless assosiated model
-# is already loaded. This will force it.
-Dir[Rails.root + 'app/models/**/*.rb'].each{|path| require path }

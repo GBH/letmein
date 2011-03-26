@@ -11,7 +11,7 @@ Assuming the model you want to authenticate has fields: *email*, *password_hash*
       letmein
     end
     
-If you want to use *username* instead of *email* and if maybe you prefer naming to password and salt columns to something else do this:
+If you want to use *username* instead of *email* and if maybe you prefer naming from password and salt columns to something else do this:
     
     class User < ActiveRecord::Base
       letmein :username, :encrypted_password, :salt

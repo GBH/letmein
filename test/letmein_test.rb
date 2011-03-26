@@ -1,5 +1,5 @@
 require 'test/unit'
-require 'active_record'
+require 'rails'
 require 'letmein'
 require 'sqlite3'
 
