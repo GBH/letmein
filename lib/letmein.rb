@@ -30,9 +30,11 @@ module LetMeIn
     attr_accessor :identifier, :password, :authenticated_object
     validate :authenticate
     
-    def initialize(params = {})
-      self.identifier = params[:identifier] || params[LetMeIn.configuration.identifier.to_sym]
-      self.password   = params[:password]
+    def initialize(params = { })
+      unless params.blank?
+        self.identifier = params[:identifier] || params[LetMeIn.configuration.identifier.to_sym]
+        self.password   = params[:password]
+      end
     end
     
     def save
