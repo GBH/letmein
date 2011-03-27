@@ -11,7 +11,6 @@ class User < ActiveRecord::Base
   # example values for password info:
   #   pass: $2a$10$0MeSaaE3I7.0FQ5ZDcKPJeD1.FzqkcOZfEKNZ/DNN.w8xOwuFdBCm
   #   salt: $2a$10$0MeSaaE3I7.0FQ5ZDcKPJe
-  letmein :username, :pass_crypt, :pass_salt
 end
 
 class LetMeInTest < Test::Unit::TestCase
@@ -19,11 +18,13 @@ class LetMeInTest < Test::Unit::TestCase
     ActiveRecord::Base.logger
     ActiveRecord::Schema.define(:version => 1) do
       create_table :users do |t|
-        t.column :username,   :string
-        t.column :pass_crypt, :string
-        t.column :pass_salt,  :string
+        t.column :email,          :string
+        t.column :password_hash,  :string
+        t.column :password_salt,  :string
       end
     end
+    LetMeIn.initialize
+    User.create!(:email => 'test@test.test', :password => 'test')
   end
   
   def teardown
@@ -32,56 +33,43 @@ class LetMeInTest < Test::Unit::TestCase
     end
   end
   
-  def test_configuration_defaults
-    assert config = LetMeIn::Configuration.new
-    assert_equal nil,             config.model
-    assert_equal 'email',         config.identifier
-    assert_equal 'password_hash', config.password
-    assert_equal 'password_salt', config.salt
-  end
-  
   def test_configuration_initialization
-    conf = LetMeIn.configuration
-    assert_equal 'User',        conf.model
-    assert_equal 'username',    conf.identifier
-    assert_equal 'pass_crypt',  conf.password
-    assert_equal 'pass_salt',   conf.salt
+    assert_equal 'User',          LetMeIn.model
+    assert_equal 'email',         LetMeIn.identifier
+    assert_equal 'password_hash', LetMeIn.password
+    assert_equal 'password_salt', LetMeIn.salt
   end
   
   def test_model_password_saving
-    user = User.new(:username => 'test', :password => 'test')
-    user.save!
-    user = User.find(user.id)
+    user = User.first
     assert_equal nil, user.password
-    assert_match /.{60}/, user.pass_crypt
-    assert_match /.{29}/, user.pass_salt
+    assert_match /.{60}/, user.password_hash
+    assert_match /.{29}/, user.password_salt
   end
   
   def test_session_initialization
-    session = LetMeIn::Session.new(:username => 'test_user', :password => 'test_pass')
-    assert_equal 'test_user', session.identifier
-    assert_equal 'test_user', session.username
+    session = LetMeIn::Session.new(:email => 'test@test.test', :password => 'test_pass')
+    assert_equal 'test@test.test', session.identifier
+    assert_equal 'test@test.test', session.email
     assert_equal 'test_pass', session.password
     
-    session.username = 'new_user'
-    assert_equal 'new_user', session.identifier
-    assert_equal 'new_user', session.username
+    session.email = 'new_user@test.test'
+    assert_equal 'new_user@test.test', session.identifier
+    assert_equal 'new_user@test.test', session.email
     
     assert_equal nil, session.authenticated_object
     assert_equal nil, session.user
   end
   
   def test_session_authentication
-    user = User.create!(:username => 'test', :password => 'test')
-    session = LetMeIn::Session.create(:username => 'test', :password => 'test')
+    session = LetMeIn::Session.create(:email => User.first.email, :password => 'test')
     assert session.errors.blank?
-    assert_equal user, session.authenticated_object
-    assert_equal user, session.user
+    assert_equal User.first, session.authenticated_object
+    assert_equal User.first, session.user
   end
   
   def test_session_authentication_failure
-    user = User.create!(:username => 'test', :password => 'test')
-    session = LetMeIn::Session.create(:username => 'test', :password => 'bad_pass')
+    session = LetMeIn::Session.create(:email => User.first.email, :password => 'bad_pass')
     assert session.errors.present?
     assert_equal 'Failed to authenticate', session.errors[:base].first
     assert_equal nil, session.authenticated_object
@@ -89,8 +77,7 @@ class LetMeInTest < Test::Unit::TestCase
   end
   
   def test_session_authentication_exception
-    user = User.create!(:username => 'test', :password => 'test')
-    session = LetMeIn::Session.new(:username => 'test', :password => 'bad_pass')
+    session = LetMeIn::Session.new(:email => User.first.email, :password => 'bad_pass')
     begin
       session.save!
     rescue LetMeIn::Error => e
