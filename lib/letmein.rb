@@ -7,7 +7,7 @@ module LetMeIn
   
   class Railtie < Rails::Railtie
     config.after_initialize do
-      LetMeIn.initialize unless LetMeIn.model.present?
+      LetMeIn.initialize unless LetMeIn.models.present?
     end
   end
   
