@@ -1,7 +1,7 @@
 letmein
 =======
 
-**letmein** is a minimalistic authentication plugin for Rails 3 applications. It doesn't have anything other than the LetMeIn::Session object that you can use to authenticate logins.
+**letmein** is a minimalistic authentication plugin for Rails 3 applications. It doesn't have anything other than the UserSession (or WhateverSession) object that you can use to authenticate logins.
 
 Setup
 =====
@@ -32,9 +32,9 @@ When creating/updating a record you have access to *password* accessor.
 Authentication
 ==============
 
-You authenticate using LetMeIn::Session object. Example:
+You authenticate using UserSession object. Example:
     
-    >> session = LetMeIn::Session.new(:email => 'example@example.com', :password => 'letmein')
+    >> session = UserSession.new(:email => 'example@example.com', :password => 'letmein')
     >> session.save
     => true
     >> session.user
@@ -42,7 +42,7 @@ You authenticate using LetMeIn::Session object. Example:
     
 When credentials are invalid:
     
-    >> session = LetMeIn::Session.new(:email => 'example@example.com', :password => 'bad_password')
+    >> session = UserSession.new(:email => 'example@example.com', :password => 'bad_password')
     >> session.save
     => false
     >> session.user
@@ -55,7 +55,7 @@ There are no built-in routes/controllers/views/helpers or anything. I'm confiden
 
     class SessionsController < ApplicationController
       def create
-        @session = LetMeIn::Session.new(params[:let_me_in_session])
+        @session = UserSession.new(params[:user_session])
         @session.save!
         session[:user_id] = @session.user.id
         flash[:notice] = "Welcome back #{@session.user.name}!"
@@ -68,6 +68,17 @@ There are no built-in routes/controllers/views/helpers or anything. I'm confiden
     end
     
 Upon successful login you have access to *session[:user_id]*. The rest is up to you.
+
+Authenticating Multiple Models
+==============================
+Yes, you can do that too. Let's assume you also want to authenticate admins that don't have email addresses, but have usernames.
+
+    LetMeIn.initialize(
+      :model      => ['User', 'Admin'],
+      :identifier => ['email', 'username']
+    )
+    
+Bam! You're done. Now you have an AdminSession object that will use *username* and *password* to authenticate.
 
 Copyright
 =========
