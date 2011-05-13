@@ -6,7 +6,7 @@ module LetMeIn
   Error = Class.new StandardError
   
   class Railtie < Rails::Railtie
-    config.after_initialize do
+    config.to_prepare do
       LetMeIn.initialize unless LetMeIn.models.present?
     end
   end
