@@ -5,11 +5,11 @@
 
 Gem::Specification.new do |s|
   s.name = %q{letmein}
-  s.version = "0.0.7"
+  s.version = "0.0.8"
 
   s.required_rubygems_version = Gem::Requirement.new(">= 0") if s.respond_to? :required_rubygems_version=
   s.authors = ["Oleg Khabarov"]
-  s.date = %q{2011-03-28}
+  s.date = %q{2011-05-13}
   s.description = %q{minimalistic authentication}
   s.email = %q{oleg@khabarov.ca}
   s.extra_rdoc_files = [
@@ -30,14 +30,13 @@ Gem::Specification.new do |s|
   s.homepage = %q{http://github.com/GBH/letmein}
   s.licenses = ["MIT"]
   s.require_paths = ["lib"]
-  s.rubygems_version = %q{1.3.7}
+  s.rubygems_version = %q{1.7.2}
   s.summary = %q{minimalistic authentication}
   s.test_files = [
     "test/letmein_test.rb"
   ]
 
   if s.respond_to? :specification_version then
-    current_version = Gem::Specification::CURRENT_SPECIFICATION_VERSION
     s.specification_version = 3
 
     if Gem::Version.new(Gem::VERSION) >= Gem::Version.new('1.2.0') then
