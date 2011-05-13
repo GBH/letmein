@@ -25,50 +25,85 @@ class LetMeInTest < Test::Unit::TestCase
         t.column :pass_salt,  :string
       end
     end
-    LetMeIn.initialize(
-      :model      => ['User', 'Admin'],
-      :identifier => ['email', 'username'],
-      :password   => ['password_hash', 'pass_hash'],
-      :salt       => ['password_salt', 'pass_salt']
-    )
-    User.create!(:email => 'test@test.test', :password => 'test')
-    Admin.create!(:username => 'admin', :password => 'test')
+    init_default_configuration
+  end
+  
+  def init_default_configuration
+    remove_session_classes
+    LetMeIn.configure do |c|
+      c.models      = ['User']
+      c.identifiers = ['email']
+      c.passwords   = ['password_hash']
+      c.salts       = ['password_salt']
+    end
+    LetMeIn.initialize
+  end
+  
+  def init_custom_configuration
+    remove_session_classes
+    LetMeIn.configure do |c|
+      c.models      = ['User', 'Admin']
+      c.identifiers = ['email', 'username']
+      c.passwords   = ['password_hash', 'pass_hash']
+      c.salts       = ['password_salt', 'pass_salt']
+    end
+    LetMeIn.initialize
+  end
+  
+  def remove_session_classes
+    Object.send(:remove_const, :UserSession)  rescue nil
+    Object.send(:remove_const, :AdminSession) rescue nil
   end
   
   def teardown
     ActiveRecord::Base.connection.tables.each do |table|
       ActiveRecord::Base.connection.drop_table(table)
     end
-    Object.send(:remove_const, :UserSession)
-    Object.send(:remove_const, :AdminSession)
+    remove_session_classes
   end
   
-  def test_configuration_initialization
-    assert_equal ['User', 'Admin'],               LetMeIn.models
-    assert_equal ['email', 'username'],           LetMeIn.identifiers
-    assert_equal ['password_hash', 'pass_hash'],  LetMeIn.passwords
-    assert_equal ['password_salt', 'pass_salt'],  LetMeIn.salts
+  # -- Tests ----------------------------------------------------------------
+  def test_default_configuration_initialization
+    assert_equal ['User'],          LetMeIn.config.models
+    assert_equal ['email'],         LetMeIn.config.identifiers
+    assert_equal ['password_hash'], LetMeIn.config.passwords
+    assert_equal ['password_salt'], LetMeIn.config.salts
   end
   
-  def test_model_password_saving
-    user = User.first
-    assert_equal nil, user.password
+  def test_custom_configuration_initialization
+    LetMeIn.configure do |c|
+      c.model       = 'Account'
+      c.identifier  = 'username'
+      c.password    = 'encrypted_pass'
+      c.salt        = 'salt'
+    end
+    assert_equal ['Account'],         LetMeIn.config.models
+    assert_equal ['username'],        LetMeIn.config.identifiers
+    assert_equal ['encrypted_pass'],  LetMeIn.config.passwords
+    assert_equal ['salt'],            LetMeIn.config.salts
+  end
+  
+  def test_model_integration
+    assert User.new.respond_to?(:password)
+    user = User.create!(:email => 'test@test.test', :password => 'pass')
     assert_match /.{60}/, user.password_hash
     assert_match /.{29}/, user.password_salt
   end
   
-  def test_model_password_saving_secondary
-    user = Admin.first
-    assert_equal nil, user.password
+  def test_model_integration_custom
+    init_custom_configuration
+    assert Admin.new.respond_to?(:password)
+    user = Admin.create!(:username => 'test', :password => 'pass')
     assert_match /.{60}/, user.pass_hash
     assert_match /.{29}/, user.pass_salt
   end
   
   def test_session_initialization
-    session = UserSession.new(:email => 'test@test.test', :password => 'test_pass')
+    assert defined?(UserSession)
+    session = UserSession.new(:email => 'test@test.test', :password => 'pass')
     assert_equal 'test@test.test', session.identifier
     assert_equal 'test@test.test', session.email
-    assert_equal 'test_pass', session.password
+    assert_equal 'pass', session.password
     
     session.email = 'new_user@test.test'
     assert_equal 'new_user@test.test', session.identifier
@@ -79,6 +114,8 @@ class LetMeInTest < Test::Unit::TestCase
   end
   
   def test_session_initialization_secondary
+    init_custom_configuration
+    assert defined?(AdminSession)
     session = AdminSession.new(:username => 'admin', :password => 'test_pass')
     assert_equal 'admin', session.identifier
     assert_equal 'admin', session.username
@@ -93,21 +130,25 @@ class LetMeInTest < Test::Unit::TestCase
   end
   
   def test_session_authentication
-    session = UserSession.create(:email => User.first.email, :password => 'test')
+    user = User.create!(:email => 'test@test.test', :password => 'pass')
+    session = UserSession.create(:email => user.email, :password => 'pass')
     assert session.errors.blank?
-    assert_equal User.first, session.authenticated_object
-    assert_equal User.first, session.user
+    assert_equal user, session.authenticated_object
+    assert_equal user, session.user
   end
   
-  def test_session_authentication_secondary
-    session = AdminSession.create(:username => Admin.first.username, :password => 'test')
+  def test_session_authentication_custom
+    init_custom_configuration
+    admin = Admin.create!(:username => 'admin', :password => 'pass')
+    session = AdminSession.create(:username => admin.username, :password => 'pass')
     assert session.errors.blank?
-    assert_equal Admin.first, session.authenticated_object
-    assert_equal Admin.first, session.admin
+    assert_equal admin, session.authenticated_object
+    assert_equal admin, session.admin
   end
   
   def test_session_authentication_failure
-    session = UserSession.create(:email => User.first.email, :password => 'bad_pass')
+    user = User.create!(:email => 'test@test.test', :password => 'pass')
+    session = UserSession.create(:email => user.email, :password => 'bad_pass')
     assert session.errors.present?
     assert_equal 'Failed to authenticate', session.errors[:base].first
     assert_equal nil, session.authenticated_object
@@ -115,7 +156,8 @@ class LetMeInTest < Test::Unit::TestCase
   end
   
   def test_session_authentication_exception
-    session = UserSession.new(:email => User.first.email, :password => 'bad_pass')
+    user = User.create!(:email => 'test@test.test', :password => 'pass')
+    session = UserSession.new(:email => user.email, :password => 'bad_pass')
     begin
       session.save!
     rescue LetMeIn::Error => e

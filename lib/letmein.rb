@@ -7,25 +7,50 @@ module LetMeIn
   
   class Railtie < Rails::Railtie
     config.to_prepare do
-      LetMeIn.initialize unless LetMeIn.models.present?
+      LetMeIn.initialize
     end
   end
   
-  mattr_accessor :models, :identifiers, :passwords, :salts
-  def self.initialize(params = {})
-    @@models      = [params[:model]      || 'User'          ].flatten
-    @@identifiers = [params[:identifier] || 'email'         ].flatten
-    @@passwords   = [params[:password]   || 'password_hash' ].flatten
-    @@salts       = [params[:salt]       || 'password_salt' ].flatten
+  # Configuration class with some defaults. Can be changed like this:
+  #   LetMeIn.configure do |conf|
+  #     conf.model      = 'Account'
+  #     conf.identifier = 'username'
+  #   end
+  class Config
+    ACCESSORS = %w(models identifiers passwords salts)
+    attr_accessor *ACCESSORS
+    def initialize
+      @models       = ['User']
+      @identifiers  = ['email']
+      @passwords    = ['password_hash']
+      @salts        = ['password_salt']
+    end
+    ACCESSORS.each do |a|
+      define_method("#{a.singularize}=") do |val|
+        send("#{a}=", [val].flatten)
+      end
+    end
+  end
+  
+  def self.config
+    @config ||= Config.new
+  end
+  
+  def self.configure
+    yield config
+  end
+  
+  def self.initialize
     
     def self.accessor(name, index = 0)
       name = name.to_s.pluralize
-      self.send(name)[index] || self.send(name)[0]
+      self.config.send(name)[index] || self.config.send(name)[0]
     end
     
-    @@models.each do |model|
+    self.config.models.each do |model|
+      klass = model.constantize rescue next
       
-      model.constantize.send :include, LetMeIn::Model
+      klass.send :include, LetMeIn::Model
       
       Object.const_set("#{model.to_s.camelize}Session", Class.new do
         include ActiveModel::Validations
@@ -34,7 +59,7 @@ module LetMeIn
         
         def initialize(params = { })
           unless params.blank?
-            i = LetMeIn.accessor(:identifier, LetMeIn.models.index(self.class.to_s.gsub('Session','')))
+            i = LetMeIn.accessor(:identifier, LetMeIn.config.models.index(self.class.to_s.gsub('Session','')))
             self.identifier = params[:identifier] || params[i.to_sym]
             self.password   = params[:password]
           end
@@ -58,7 +83,7 @@ module LetMeIn
         
         def method_missing(method_name, *args)
           m = self.class.to_s.gsub('Session','')
-          i = LetMeIn.accessor(:identifier, LetMeIn.models.index(m))
+          i = LetMeIn.accessor(:identifier, LetMeIn.config.models.index(m))
           case method_name.to_s
             when i            then self.identifier
             when "#{i}="      then self.identifier = args[0]
@@ -69,9 +94,9 @@ module LetMeIn
         
         def authenticate
           m = self.class.to_s.gsub('Session','')
-          i = LetMeIn.accessor(:identifier, LetMeIn.models.index(m))
-          p = LetMeIn.accessor(:password, LetMeIn.models.index(m))
-          s = LetMeIn.accessor(:password, LetMeIn.models.index(m))
+          i = LetMeIn.accessor(:identifier, LetMeIn.config.models.index(m))
+          p = LetMeIn.accessor(:password, LetMeIn.config.models.index(m))
+          s = LetMeIn.accessor(:password, LetMeIn.config.models.index(m))
           object = m.constantize.send("find_by_#{i}", self.identifier)
           self.authenticated_object = if object && object.send(p) == BCrypt::Engine.hash_secret(self.password, object.send(s))
             object
@@ -96,8 +121,8 @@ module LetMeIn
         
         define_method :encrypt_password do
           if password.present?
-            p = LetMeIn.accessor(:password, LetMeIn.models.index(self.class.to_s))
-            s = LetMeIn.accessor(:salt, LetMeIn.models.index(self.class.to_s))
+            p = LetMeIn.accessor(:password, LetMeIn.config.models.index(self.class.to_s))
+            s = LetMeIn.accessor(:salt, LetMeIn.config.models.index(self.class.to_s))
             self.send("#{s}=", BCrypt::Engine.generate_salt)
             self.send("#{p}=", BCrypt::Engine.hash_secret(password, self.send(s)))
           end
