@@ -12,12 +12,12 @@ Plug the thing below into Gemfile and you know what to do after.
 
 If you want to authenticate *User* with database fields *email*, *password_hash* and *password_salt* you don't need to do anything. If you're authenticating something else, you want something like this in your initializers:
     
-    LetMeIn.initialize(
-      :model      => 'Account',
-      :identifier => 'username',
-      :password   => 'password_crypt',
-      :salt       => 'salty_salt
-    )
+    LetMeIn.configure do |conf|
+      conf.model      = 'Account'
+      conf.identifier = 'username'
+      conf.password   = 'password_crypt'
+      conf.salt       = 'salty_salt
+    end
     
 When creating/updating a record you have access to *password* accessor.
     
@@ -73,10 +73,10 @@ Authenticating Multiple Models
 ==============================
 Yes, you can do that too. Let's assume you also want to authenticate admins that don't have email addresses, but have usernames.
 
-    LetMeIn.initialize(
-      :model      => ['User', 'Admin'],
-      :identifier => ['email', 'username']
-    )
+    LetMeIn.configure do |conf|
+      conf.models     = ['User', 'Admin']
+      conf.identifier = ['email', 'username']
+    end
     
 Bam! You're done. Now you have an AdminSession object that will use *username* and *password* to authenticate.
 
