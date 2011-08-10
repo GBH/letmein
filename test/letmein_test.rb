@@ -165,4 +165,15 @@ class LetMeInTest < Test::Unit::TestCase
     end
     assert_equal nil, session.authenticated_object
   end
+  
+  def test_session_authentication_on_blank_object
+    user = User.create!(:email => 'test@test.test')
+    session = UserSession.new(:email => 'test@test.test', :password => 'pass')
+    begin
+      session.save!
+    rescue LetMeIn::Error => e
+      assert_equal 'Failed to authenticate', e.to_s
+    end
+    assert_equal nil, session.authenticated_object
+  end
 end

@@ -98,7 +98,7 @@ module LetMeIn
           p = LetMeIn.accessor(:password, LetMeIn.config.models.index(m))
           s = LetMeIn.accessor(:password, LetMeIn.config.models.index(m))
           object = m.constantize.send("find_by_#{i}", self.identifier)
-          self.authenticated_object = if object && object.send(p) == BCrypt::Engine.hash_secret(self.password, object.send(s))
+          self.authenticated_object = if object && !object.send(p).blank? && object.send(p) == BCrypt::Engine.hash_secret(self.password, object.send(s))
             object
           else
             errors.add :base, 'Failed to authenticate'
