@@ -176,4 +176,8 @@ class LetMeInTest < Test::Unit::TestCase
     end
     assert_equal nil, session.authenticated_object
   end
+  
+  def test_session_class_override
+    
+  end
 end

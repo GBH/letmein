@@ -32,6 +32,66 @@ module LetMeIn
     end
   end
   
+  # LetMeIn::Session object. Things like UserSession are created automatically
+  class Session
+    include ActiveModel::Validations
+    attr_accessor :identifier, :password, :authenticated_object
+    validate :authenticate
+    
+    def initialize(params = { })
+      unless params.blank?
+        i = LetMeIn.accessor(:identifier, LetMeIn.config.models.index(self.class.to_s.gsub('Session','')))
+        self.identifier = params[:identifier] || params[i.to_sym]
+        self.password   = params[:password]
+      end
+    end
+    
+    def save
+      self.valid?
+    end
+    
+    def save!
+      save || raise(LetMeIn::Error, 'Failed to authenticate')
+    end
+    
+    def self.create(params = {})
+      object = self.new(params); object.save; object
+    end
+    
+    def self.create!(params = {})
+      object = self.new(params); object.save!; object
+    end
+    
+    def method_missing(method_name, *args)
+      m = self.class.to_s.gsub('Session','')
+      i = LetMeIn.accessor(:identifier, LetMeIn.config.models.index(m))
+      case method_name.to_s
+        when i            then self.identifier
+        when "#{i}="      then self.identifier = args[0]
+        when m.underscore then self.authenticated_object
+        else super
+      end
+    end
+    
+    def authenticate
+      m = self.class.to_s.gsub('Session','')
+      i = LetMeIn.accessor(:identifier, LetMeIn.config.models.index(m))
+      p = LetMeIn.accessor(:password, LetMeIn.config.models.index(m))
+      s = LetMeIn.accessor(:password, LetMeIn.config.models.index(m))
+      object = m.constantize.send("find_by_#{i}", self.identifier)
+      self.authenticated_object = if object && !object.send(p).blank? && object.send(p) == BCrypt::Engine.hash_secret(self.password, object.send(s))
+        object
+      else
+        errors.add :base, 'Failed to authenticate'
+        nil
+      end
+    end
+    
+    def to_key
+      nil
+    end
+  end
+  
   def self.config
     @config ||= Config.new
   end
@@ -52,63 +112,8 @@ module LetMeIn
       
       klass.send :include, LetMeIn::Model
       
-      Object.const_set("#{model.to_s.camelize}Session", Class.new do
-        include ActiveModel::Validations
-        attr_accessor :identifier, :password, :authenticated_object
-        validate :authenticate
-        
-        def initialize(params = { })
-          unless params.blank?
-            i = LetMeIn.accessor(:identifier, LetMeIn.config.models.index(self.class.to_s.gsub('Session','')))
-            self.identifier = params[:identifier] || params[i.to_sym]
-            self.password   = params[:password]
-          end
-        end
-        
-        def save
-          self.valid?
-        end
-        
-        def save!
-          save || raise(LetMeIn::Error, 'Failed to authenticate')
-        end
-        
-        def self.create(params = {})
-          object = self.new(params); object.save; object
-        end
-        
-        def self.create!(params = {})
-          object = self.new(params); object.save!; object
-        end
-        
-        def method_missing(method_name, *args)
-          m = self.class.to_s.gsub('Session','')
-          i = LetMeIn.accessor(:identifier, LetMeIn.config.models.index(m))
-          case method_name.to_s
-            when i            then self.identifier
-            when "#{i}="      then self.identifier = args[0]
-            when m.underscore then self.authenticated_object
-            else super
-          end
-        end
-        
-        def authenticate
-          m = self.class.to_s.gsub('Session','')
-          i = LetMeIn.accessor(:identifier, LetMeIn.config.models.index(m))
-          p = LetMeIn.accessor(:password, LetMeIn.config.models.index(m))
-          s = LetMeIn.accessor(:password, LetMeIn.config.models.index(m))
-          object = m.constantize.send("find_by_#{i}", self.identifier)
-          self.authenticated_object = if object && !object.send(p).blank? && object.send(p) == BCrypt::Engine.hash_secret(self.password, object.send(s))
-            object
-          else
-            errors.add :base, 'Failed to authenticate'
-            nil
-          end
-        end
-        
-        def to_key
-          nil
-        end
+      Object.const_set("#{model.to_s.camelize}Session", Class.new(LetMeIn::Session) do
+        # ...
       end)
     end
   end
