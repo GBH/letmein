@@ -1,5 +1,4 @@
-letmein
-=======
+# letmein [![Build Status](http://travis-ci.org/GBH/letmein.png)](http://travis-ci.org/GBH/letmein)
 
 **letmein** is a minimalistic authentication plugin for Rails 3 applications. It doesn't have anything other than the UserSession (or WhateverSession) object that you can use to authenticate logins.
 
