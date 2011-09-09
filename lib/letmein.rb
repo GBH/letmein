@@ -53,7 +53,7 @@ module LetMeIn
     validate :authenticate
     
     def initialize(params = { })
-      self.class.model      ||= self.class.to_s.gsub('Session', '')
+      self.class.model      ||= self.class.to_s.gsub('Session', '') || LetMeIn.config.models.first
       self.class.attribute  ||= LetMeIn.accessor(:attribute, LetMeIn.config.models.index(self.class.model))
       self.login      = params[:login] || params[self.class.attribute.to_sym]
       self.password   = params[:password]
@@ -102,6 +102,24 @@ module LetMeIn
     end
   end
   
+  module Model
+    def self.included(base)
+      base.instance_eval do
+        attr_accessor :password
+        before_save :encrypt_password
+        
+        define_method :encrypt_password do
+          if password.present?
+            p = LetMeIn.accessor(:password, LetMeIn.config.models.index(self.class.to_s))
+            s = LetMeIn.accessor(:salt, LetMeIn.config.models.index(self.class.to_s))
+            self.send("#{s}=", BCrypt::Engine.generate_salt)
+            self.send("#{p}=", BCrypt::Engine.hash_secret(password, self.send(s)))
+          end
+        end
+      end
+    end
+  end
+  
   def self.config
     @config ||= Config.new
   end
@@ -120,24 +138,6 @@ module LetMeIn
       klass = model.constantize rescue next
       klass.send :include, LetMeIn::Model
       Object.const_set("#{model.to_s.camelize}Session", Class.new(LetMeIn::Session))
-    end
-  end
-  
-  module Model
-    def self.included(base)
-      base.instance_eval do
-        attr_accessor :password
-        before_save :encrypt_password
-        
-        define_method :encrypt_password do
-          if password.present?
-            p = LetMeIn.accessor(:password, LetMeIn.config.models.index(self.class.to_s))
-            s = LetMeIn.accessor(:salt, LetMeIn.config.models.index(self.class.to_s))
-            self.send("#{s}=", BCrypt::Engine.generate_salt)
-            self.send("#{p}=", BCrypt::Engine.hash_secret(password, self.send(s)))
-          end
-        end
-      end
     end
   end
 end

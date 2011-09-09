@@ -10,8 +10,19 @@ $stdout = StringIO.new
 class User  < ActiveRecord::Base ; end
 class Admin < ActiveRecord::Base ; end
 
-class MySession < LetMeIn::Session
-  # ...
+class OpenSession < LetMeIn::Session
+  @model, @attribute = 'User', 'email'
+  def authenticate
+    super
+  end
+end
+
+class ClosedSession < LetMeIn::Session
+  @model, @attribute = 'User', 'email'
+  def authenticate
+    super
+    errors.add :base, "You shall not pass #{user.email}"
+  end
 end
 
 class LetMeInTest < Test::Unit::TestCase
@@ -180,5 +191,22 @@ class LetMeInTest < Test::Unit::TestCase
       assert_equal 'Failed to authenticate', e.to_s
     end
     assert_equal nil, session.object
+  end
+  
+  def test_custom_open_session
+    user = User.create!(:email => 'test@test.test', :password => 'pass')
+    session = OpenSession.new(:email => 'test@test.test', :password => 'bad_pass')
+    assert session.invalid?
+    assert_equal 'Failed to authenticate', session.errors[:base].first
+    session = OpenSession.new(:email => 'test@test.test', :password => 'pass')
+    assert session.valid?
+    assert_equal user, session.user
+  end
+  
+  def test_custom_closed_session
+    user = User.create!(:email => 'test@test.test', :password => 'pass')
+    session = ClosedSession.new(:email => 'test@test.test', :password => 'pass')
+    assert session.invalid?
+    assert_equal 'You shall not pass test@test.test', session.errors[:base].first
   end
 end

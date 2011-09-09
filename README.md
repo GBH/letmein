@@ -14,7 +14,7 @@ If you want to authenticate *User* with database fields *email*, *password_hash*
     
     LetMeIn.configure do |conf|
       conf.model      = 'Account'
-      conf.identifier = 'username'
+      conf.attribute  = 'username'
       conf.password   = 'password_crypt'
       conf.salt       = 'salty_salt
     end
@@ -75,10 +75,26 @@ Yes, you can do that too. Let's assume you also want to authenticate admins that
 
     LetMeIn.configure do |conf|
       conf.models     = ['User', 'Admin']
-      conf.identifier = ['email', 'username']
+      conf.attributes = ['email', 'username']
     end
     
 Bam! You're done. Now you have an AdminSession object that will use *username* and *password* to authenticate.
+
+Overriding Session Authentication
+=================================
+By default user will be logged in if provided email and password match. If you need to add a bit more logic to that you'll need to create your own session object. In the following example we do an additional check to see if user is 'approved' before letting him in.
+
+    class MySession < LetMeIn::Session
+      @model, @attribute = 'User', 'email' # need to know what model we're validating
+      
+      def authenticate
+        super # need to authenticate with email/password first
+        if user && user.is_approved?
+          # adding a validation error will prevent login
+          errors.add :base, 'You are not approved yet' 
+        end
+      end
+    end
 
 Copyright
 =========
