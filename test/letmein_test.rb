@@ -11,18 +11,23 @@ class User  < ActiveRecord::Base ; end
 class Admin < ActiveRecord::Base ; end
 
 class OpenSession < LetMeIn::Session
-  @model, @attribute = 'User', 'email'
+  # @model, @attribute = 'User', 'email'
   def authenticate
     super
   end
 end
 
 class ClosedSession < LetMeIn::Session
-  @model, @attribute = 'User', 'email'
+  # @model, @attribute = 'User', 'email'
   def authenticate
     super
     errors.add :base, "You shall not pass #{user.email}"
   end
+end
+
+class CustomAdminSession < LetMeIn::Session
+  @model = 'Admin'
+  # ...
 end
 
 class LetMeInTest < Test::Unit::TestCase
@@ -208,5 +213,13 @@ class LetMeInTest < Test::Unit::TestCase
     session = ClosedSession.new(:email => 'test@test.test', :password => 'pass')
     assert session.invalid?
     assert_equal 'You shall not pass test@test.test', session.errors[:base].first
+  end
+  
+  def test_custom_admin_session
+    init_custom_configuration
+    admin = Admin.create!(:username => 'admin', :password => 'pass')
+    session = CustomAdminSession.new(:username => 'admin', :password => 'pass')
+    assert session.valid?
+    assert_equal admin, session.admin
   end
 end

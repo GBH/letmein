@@ -84,13 +84,15 @@ Overriding Session Authentication
 By default user will be logged in if provided email and password match. If you need to add a bit more logic to that you'll need to create your own session object. In the following example we do an additional check to see if user is 'approved' before letting him in.
 
     class MySession < LetMeIn::Session
-      @model, @attribute = 'User', 'email' # need to know what model we're validating
+      # Model that is being authenticated is derived from the class name
+      # If you're authenticating multiple models you need to specify which one
+      @model = 'User'
       
       def authenticate
         super # need to authenticate with email/password first
         if user && user.is_approved?
           # adding a validation error will prevent login
-          errors.add :base, 'You are not approved yet' 
+          errors.add :base, "You are not approved yet, #{user.name}."
         end
       end
     end

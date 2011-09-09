@@ -53,7 +53,9 @@ module LetMeIn
     validate :authenticate
     
     def initialize(params = { })
-      self.class.model      ||= self.class.to_s.gsub('Session', '') || LetMeIn.config.models.first
+      model = self.class.to_s.gsub('Session', '')
+      model = LetMeIn.config.models.member?(model) ? model : LetMeIn.config.models.first
+      self.class.model      ||= model
       self.class.attribute  ||= LetMeIn.accessor(:attribute, LetMeIn.config.models.index(self.class.model))
       self.login      = params[:login] || params[self.class.attribute.to_sym]
       self.password   = params[:password]
