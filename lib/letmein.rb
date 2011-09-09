@@ -17,11 +17,11 @@ module LetMeIn
   #     conf.identifier = 'username'
   #   end
   class Config
-    ACCESSORS = %w(models identifiers passwords salts)
+    ACCESSORS = %w(models attributes passwords salts)
     attr_accessor *ACCESSORS
     def initialize
       @models       = ['User']
-      @identifiers  = ['email']
+      @attributes   = ['email']
       @passwords    = ['password_hash']
       @salts        = ['password_salt']
     end
@@ -32,18 +32,31 @@ module LetMeIn
     end
   end
   
-  # LetMeIn::Session object. Things like UserSession are created automatically
+  # LetMeIn::Session object. Things like UserSession are created
+  # automatically after the initialization
   class Session
+    
+    # class MySession < LetMeIn::Session
+    #   @model      = 'User'
+    #   @attribute  = 'email'
+    # end
+    class << self
+      attr_accessor :model, :attribute
+    end
+    
     include ActiveModel::Validations
-    attr_accessor :identifier, :password, :authenticated_object
+    
+    attr_accessor :login,       # test@test.test
+                  :password,    # secretpassword
+                  :object       # authenticated object
+                  
     validate :authenticate
     
     def initialize(params = { })
-      unless params.blank?
-        i = LetMeIn.accessor(:identifier, LetMeIn.config.models.index(self.class.to_s.gsub('Session','')))
-        self.identifier = params[:identifier] || params[i.to_sym]
-        self.password   = params[:password]
-      end
+      self.class.model      ||= self.class.to_s.gsub('Session', '')
+      self.class.attribute  ||= LetMeIn.accessor(:attribute, LetMeIn.config.models.index(self.class.model))
+      self.login      = params[:login] || params[self.class.attribute.to_sym]
+      self.password   = params[:password]
     end
     
     def save
@@ -63,23 +76,20 @@ module LetMeIn
     end
     
     def method_missing(method_name, *args)
-      m = self.class.to_s.gsub('Session','')
-      i = LetMeIn.accessor(:identifier, LetMeIn.config.models.index(m))
       case method_name.to_s
-        when i            then self.identifier
-        when "#{i}="      then self.identifier = args[0]
-        when m.underscore then self.authenticated_object
+        when self.class.attribute         then self.login
+        when "#{self.class.attribute}="   then self.login = args[0]
+        when self.class.model.underscore  then self.object
         else super
       end
     end
     
     def authenticate
-      m = self.class.to_s.gsub('Session','')
-      i = LetMeIn.accessor(:identifier, LetMeIn.config.models.index(m))
-      p = LetMeIn.accessor(:password, LetMeIn.config.models.index(m))
-      s = LetMeIn.accessor(:password, LetMeIn.config.models.index(m))
-      object = m.constantize.send("find_by_#{i}", self.identifier)
-      self.authenticated_object = if object && !object.send(p).blank? && object.send(p) == BCrypt::Engine.hash_secret(self.password, object.send(s))
+      p = LetMeIn.accessor(:password, LetMeIn.config.models.index(self.class.model))
+      s = LetMeIn.accessor(:salt, LetMeIn.config.models.index(self.class.model))
+      
+      object = self.class.model.constantize.send("find_by_#{self.class.attribute}", self.login)
+      self.object = if object && !object.send(p).blank? && object.send(p) == BCrypt::Engine.hash_secret(self.password, object.send(s))
         object
       else
         errors.add :base, 'Failed to authenticate'
@@ -101,7 +111,6 @@ module LetMeIn
   end
   
   def self.initialize
-    
     def self.accessor(name, index = 0)
       name = name.to_s.pluralize
       self.config.send(name)[index] || self.config.send(name)[0]
@@ -109,12 +118,8 @@ module LetMeIn
     
     self.config.models.each do |model|
       klass = model.constantize rescue next
-      
       klass.send :include, LetMeIn::Model
-      
-      Object.const_set("#{model.to_s.camelize}Session", Class.new(LetMeIn::Session) do
-        # ...
-      end)
+      Object.const_set("#{model.to_s.camelize}Session", Class.new(LetMeIn::Session))
     end
   end
   

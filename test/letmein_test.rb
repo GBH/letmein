@@ -10,7 +10,12 @@ $stdout = StringIO.new
 class User  < ActiveRecord::Base ; end
 class Admin < ActiveRecord::Base ; end
 
+class MySession < LetMeIn::Session
+  # ...
+end
+
 class LetMeInTest < Test::Unit::TestCase
+  
   def setup
     ActiveRecord::Base.logger
     ActiveRecord::Schema.define(:version => 1) do
@@ -32,7 +37,7 @@ class LetMeInTest < Test::Unit::TestCase
     remove_session_classes
     LetMeIn.configure do |c|
       c.models      = ['User']
-      c.identifiers = ['email']
+      c.attributes  = ['email']
       c.passwords   = ['password_hash']
       c.salts       = ['password_salt']
     end
@@ -43,7 +48,7 @@ class LetMeInTest < Test::Unit::TestCase
     remove_session_classes
     LetMeIn.configure do |c|
       c.models      = ['User', 'Admin']
-      c.identifiers = ['email', 'username']
+      c.attributes  = ['email', 'username']
       c.passwords   = ['password_hash', 'pass_hash']
       c.salts       = ['password_salt', 'pass_salt']
     end
@@ -65,7 +70,7 @@ class LetMeInTest < Test::Unit::TestCase
   # -- Tests ----------------------------------------------------------------
   def test_default_configuration_initialization
     assert_equal ['User'],          LetMeIn.config.models
-    assert_equal ['email'],         LetMeIn.config.identifiers
+    assert_equal ['email'],         LetMeIn.config.attributes
     assert_equal ['password_hash'], LetMeIn.config.passwords
     assert_equal ['password_salt'], LetMeIn.config.salts
   end
@@ -73,12 +78,12 @@ class LetMeInTest < Test::Unit::TestCase
   def test_custom_configuration_initialization
     LetMeIn.configure do |c|
       c.model       = 'Account'
-      c.identifier  = 'username'
+      c.attribute   = 'username'
       c.password    = 'encrypted_pass'
       c.salt        = 'salt'
     end
     assert_equal ['Account'],         LetMeIn.config.models
-    assert_equal ['username'],        LetMeIn.config.identifiers
+    assert_equal ['username'],        LetMeIn.config.attributes
     assert_equal ['encrypted_pass'],  LetMeIn.config.passwords
     assert_equal ['salt'],            LetMeIn.config.salts
   end
@@ -101,15 +106,15 @@ class LetMeInTest < Test::Unit::TestCase
   def test_session_initialization
     assert defined?(UserSession)
     session = UserSession.new(:email => 'test@test.test', :password => 'pass')
-    assert_equal 'test@test.test', session.identifier
+    assert_equal 'test@test.test', session.login
     assert_equal 'test@test.test', session.email
     assert_equal 'pass', session.password
     
     session.email = 'new_user@test.test'
-    assert_equal 'new_user@test.test', session.identifier
+    assert_equal 'new_user@test.test', session.login
     assert_equal 'new_user@test.test', session.email
     
-    assert_equal nil, session.authenticated_object
+    assert_equal nil, session.object
     assert_equal nil, session.user
   end
   
@@ -117,15 +122,15 @@ class LetMeInTest < Test::Unit::TestCase
     init_custom_configuration
     assert defined?(AdminSession)
     session = AdminSession.new(:username => 'admin', :password => 'test_pass')
-    assert_equal 'admin', session.identifier
+    assert_equal 'admin', session.login
     assert_equal 'admin', session.username
     assert_equal 'test_pass', session.password
     
     session.username = 'new_admin'
-    assert_equal 'new_admin', session.identifier
+    assert_equal 'new_admin', session.login
     assert_equal 'new_admin', session.username
     
-    assert_equal nil, session.authenticated_object
+    assert_equal nil, session.object
     assert_equal nil, session.admin
   end
   
@@ -133,7 +138,7 @@ class LetMeInTest < Test::Unit::TestCase
     user = User.create!(:email => 'test@test.test', :password => 'pass')
     session = UserSession.create(:email => user.email, :password => 'pass')
     assert session.errors.blank?
-    assert_equal user, session.authenticated_object
+    assert_equal user, session.object
     assert_equal user, session.user
   end
   
@@ -142,7 +147,7 @@ class LetMeInTest < Test::Unit::TestCase
     admin = Admin.create!(:username => 'admin', :password => 'pass')
     session = AdminSession.create(:username => admin.username, :password => 'pass')
     assert session.errors.blank?
-    assert_equal admin, session.authenticated_object
+    assert_equal admin, session.object
     assert_equal admin, session.admin
   end
   
@@ -151,7 +156,7 @@ class LetMeInTest < Test::Unit::TestCase
     session = UserSession.create(:email => user.email, :password => 'bad_pass')
     assert session.errors.present?
     assert_equal 'Failed to authenticate', session.errors[:base].first
-    assert_equal nil, session.authenticated_object
+    assert_equal nil, session.object
     assert_equal nil, session.user
   end
   
@@ -163,7 +168,7 @@ class LetMeInTest < Test::Unit::TestCase
     rescue LetMeIn::Error => e
       assert_equal 'Failed to authenticate', e.to_s
     end
-    assert_equal nil, session.authenticated_object
+    assert_equal nil, session.object
   end
   
   def test_session_authentication_on_blank_object
@@ -174,10 +179,6 @@ class LetMeInTest < Test::Unit::TestCase
     rescue LetMeIn::Error => e
       assert_equal 'Failed to authenticate', e.to_s
     end
-    assert_equal nil, session.authenticated_object
-  end
-  
-  def test_session_class_override
-    
+    assert_equal nil, session.object
   end
 end
