@@ -90,7 +90,7 @@ By default user will be logged in if provided email and password match. If you n
       
       def authenticate
         super # need to authenticate with email/password first
-        if user && user.is_approved?
+        unless user && user.is_approved?
           # adding a validation error will prevent login
           errors.add :base, "You are not approved yet, #{user.name}."
         end
