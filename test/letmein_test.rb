@@ -107,16 +107,16 @@ class LetMeInTest < Test::Unit::TestCase
   def test_model_integration
     assert User.new.respond_to?(:password)
     user = User.create!(:email => 'test@test.test', :password => 'pass')
-    assert_match /.{60}/, user.password_hash
-    assert_match /.{29}/, user.password_salt
+    assert_match /^.{60}$/, user.password_hash
+    assert_match /^.{29}$/, user.password_salt
   end
   
   def test_model_integration_custom
     init_custom_configuration
     assert Admin.new.respond_to?(:password)
     user = Admin.create!(:username => 'test', :password => 'pass')
-    assert_match /.{60}/, user.pass_hash
-    assert_match /.{29}/, user.pass_salt
+    assert_match /^.{60}$/, user.pass_hash
+    assert_match /^.{29}$/, user.pass_salt
   end
   
   def test_session_initialization
