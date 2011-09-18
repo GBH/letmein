@@ -15,7 +15,7 @@ If you want to authenticate *User* with database fields *email*, *password_hash*
       conf.model      = 'Account'
       conf.attribute  = 'username'
       conf.password   = 'password_crypt'
-      conf.salt       = 'salty_salt
+      conf.salt       = 'salty_salt'
     end
     
 When creating/updating a record you have access to *password* accessor.
