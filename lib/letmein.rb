@@ -90,7 +90,7 @@ module LetMeIn
       p = LetMeIn.accessor(:password, LetMeIn.config.models.index(self.class.model))
       s = LetMeIn.accessor(:salt, LetMeIn.config.models.index(self.class.model))
       
-      object = self.class.model.constantize.send("find_by_#{self.class.attribute}", self.login)
+      object = self.class.model.constantize.where("#{self.class.attribute}" => self.login).first
       self.object = if object && !object.send(p).blank? && object.send(p) == BCrypt::Engine.hash_secret(self.password, object.send(s))
         object
       else
