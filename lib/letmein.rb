@@ -139,7 +139,11 @@ module LetMeIn
     self.config.models.each do |model|
       klass = model.constantize rescue next
       klass.send :include, LetMeIn::Model
-      Object.const_set("#{model.to_s.camelize}Session", Class.new(LetMeIn::Session))
+      
+      session_model = "#{model.to_s.camelize}Session"
+      
+      Object.send(:remove_const, session_model) if (Object.const_get(session_model) rescue nil) # remove the constant if it's defined, so that we don't get spammed with warnings.
+      Object.const_set(session_model, Class.new(LetMeIn::Session))
     end
   end
 end
