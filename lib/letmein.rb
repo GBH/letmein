@@ -142,7 +142,8 @@ module LetMeIn
       
       session_model = "#{model.to_s.camelize}Session"
       
-      Object.send(:remove_const, session_model) if (Object.const_get(session_model) rescue nil) # remove the constant if it's defined, so that we don't get spammed with warnings.
+      # remove the constant if it's defined, so that we don't get spammed with warnings.
+      Object.send(:remove_const, session_model) if (Object.const_get(session_model) rescue nil) 
       Object.const_set(session_model, Class.new(LetMeIn::Session))
     end
   end
