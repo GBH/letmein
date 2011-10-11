@@ -4,14 +4,14 @@
 # -*- encoding: utf-8 -*-
 
 Gem::Specification.new do |s|
-  s.name = %q{letmein}
-  s.version = "0.1.3"
+  s.name = "letmein"
+  s.version = "0.1.4"
 
   s.required_rubygems_version = Gem::Requirement.new(">= 0") if s.respond_to? :required_rubygems_version=
   s.authors = ["Oleg Khabarov"]
-  s.date = %q{2011-09-09}
-  s.description = %q{minimalistic authentication}
-  s.email = %q{oleg@khabarov.ca}
+  s.date = "2011-10-11"
+  s.description = "minimalistic authentication"
+  s.email = "oleg@khabarov.ca"
   s.extra_rdoc_files = [
     "LICENSE",
     "README.md"
@@ -27,11 +27,11 @@ Gem::Specification.new do |s|
     "lib/letmein.rb",
     "test/letmein_test.rb"
   ]
-  s.homepage = %q{http://github.com/GBH/letmein}
+  s.homepage = "http://github.com/GBH/letmein"
   s.licenses = ["MIT"]
   s.require_paths = ["lib"]
-  s.rubygems_version = %q{1.6.2}
-  s.summary = %q{minimalistic authentication}
+  s.rubygems_version = "1.8.10"
+  s.summary = "minimalistic authentication"
   s.test_files = [
     "test/letmein_test.rb"
   ]
