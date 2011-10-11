@@ -3,9 +3,10 @@ require 'rails'
 require 'letmein'
 require 'sqlite3'
 
-ActiveRecord::Base.establish_connection(:adapter => 'sqlite3', :database => ':memory:')
 $stdout_orig = $stdout
 $stdout = StringIO.new
+ActiveRecord::Base.establish_connection(:adapter => 'sqlite3', :database => ':memory:')
+ActiveRecord::Base.logger = Logger.new($stdout)
 
 class User  < ActiveRecord::Base ; end
 class Admin < ActiveRecord::Base ; end
