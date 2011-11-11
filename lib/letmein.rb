@@ -137,7 +137,7 @@ module LetMeIn
     end
     
     self.config.models.each do |model|
-      klass = model.constantize rescue next
+      klass = model.constantize
       klass.send :include, LetMeIn::Model
       
       session_model = "#{model.to_s.camelize}Session"
