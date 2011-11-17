@@ -73,9 +73,22 @@ class LetMeInTest < Test::Unit::TestCase
       c.passwords       = ['password_hash', 'pass_hash']
       c.salts           = ['password_salt', 'pass_salt']
       c.tokens          = ['auth_token', 'token_auth']
-      c.generate_tokens = [false, true]
+      c.generate_tokens = [false, false]
     end
     LetMeIn.initialize
+  end
+
+  def init_token_configuration
+    remove_session_classes
+    LetMeIn.configure do |c|
+      c.models          = ['User', 'Admin']
+      c.attributes      = ['email', 'username']
+      c.passwords       = ['password_hash', 'pass_hash']
+      c.salts           = ['password_salt', 'pass_salt']
+      c.tokens          = ['auth_token', 'token_auth']
+      c.generate_tokens = [false, true]
+    end
+    LetMeIn.initialize    
   end
 
   def remove_session_classes
@@ -243,13 +256,13 @@ class LetMeInTest < Test::Unit::TestCase
   end
 
   def test_generate_token
-    init_custom_configuration
+    init_token_configuration
     admin = Admin.create!(:username => 'admin', :password => 'pass')
     assert_match /^.{40}$/, admin.token_auth
   end
 
   def test_token_session_init
-    init_custom_configuration
+    init_token_configuration
     session = AdminSession.new(:token_auth => "29dkd38kduhuf88wldke21")
     assert_equal "29dkd38kduhuf88wldke21", session.token
     assert_nil session.object
@@ -265,7 +278,7 @@ class LetMeInTest < Test::Unit::TestCase
   end
 
   def test_token_authentication
-    init_custom_configuration
+    init_token_configuration
     admin = Admin.create!(:username => 'admin', :password => 'pass')
     session = AdminSession.create(:token_auth => admin.token_auth)
     assert session.errors.blank?
@@ -274,7 +287,7 @@ class LetMeInTest < Test::Unit::TestCase
   end
 
   def test_token_authentication_failure
-    init_custom_configuration
+    init_token_configuration
     admin = Admin.create!(:username => 'admin', :password => 'pass')
     session = AdminSession.create(:token_auth => 'bad_token')
     assert session.errors.present?
@@ -284,7 +297,7 @@ class LetMeInTest < Test::Unit::TestCase
   end
 
   def test_token_authentication_exception
-    init_custom_configuration
+    init_token_configuration
     admin = Admin.create!(:username => 'admin', :password => 'pass')
     session = AdminSession.new(:token_auth => 'bad_token')
     begin
