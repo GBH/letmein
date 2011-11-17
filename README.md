@@ -79,6 +79,18 @@ Yes, you can do that too. Let's assume you also want to authenticate admins that
     
 Bam! You're done. Now you have an AdminSession object that will use *username* and *password* to authenticate.
 
+Token-Based Authentication
+==========================
+Token authentication provides a simple solution for exposing APIs. When enabled, Letmein will automatically generate a token (40 character hex) for each new user. Instead of passing *email* and *password* to the *UserSession*, you merely pass *auth_token*. To enable tokens:
+
+    LetMeIn.configure do |conf|
+      conf.generate_token = true
+    end
+
+Its usage differs from the *email/password* combo in only one way:
+
+    @session = UserSession.new(params[:auth_token])
+
 Overriding Session Authentication
 =================================
 By default user will be logged in if provided email and password match. If you need to add a bit more logic to that you'll need to create your own session object. In the following example we do an additional check to see if user is 'approved' before letting him in.
