@@ -63,8 +63,7 @@ module LetMeIn
       self.class.attribute  ||= LetMeIn.accessor(:attribute, LetMeIn.config.models.index(self.class.model))
       self.login      = params[:login] || params[self.class.attribute.to_sym]
       self.password   = params[:password]
-      i = LetMeIn.config.models.index(self.class.model)
-      self.token = params[LetMeIn.accessor(:token, i).to_sym] if LetMeIn.config.generate_tokens[i]
+      self.token      = params[self.token_attribute.to_sym] if allow_tokens?
     end
     
     def save
@@ -100,10 +99,11 @@ module LetMeIn
         object = self.class.model.constantize.where(self.class.attribute => self.login).first
         self.object = object if object && !object.send(p).blank? && object.send(p) == BCrypt::Engine.hash_secret(self.password, object.send(s))
       else
-        self.object = self.class.model.constantize.where(LetMeIn.accessor(:token, LetMeIn.config.models.index(self.class.model)) => self.token).first
+        self.object = self.class.model.constantize.where(self.token_attribute => self.token).first
       end
       
       if self.object
+        self.token = self.object.send(self.token_attribute) if allow_tokens?
         object
       else
         errors.add :base, 'Failed to authenticate'
@@ -114,6 +114,17 @@ module LetMeIn
     def to_key
       nil
     end
+
+    protected
+
+      def token_attribute
+        LetMeIn.accessor(:token, LetMeIn.config.models.index(self.class.model))
+      end
+
+      def allow_tokens?
+        LetMeIn.config.generate_tokens[LetMeIn.config.models.index(self.class.model)] ? true : false
+      end
+
   end
   
   module Model

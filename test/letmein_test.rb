@@ -277,6 +277,14 @@ class LetMeInTest < Test::Unit::TestCase
     assert_nil session.user
   end
 
+  def test_return_token_if_available
+    init_token_configuration
+    admin = Admin.create!(:username => 'admin', :password => 'pass')
+    session = AdminSession.create(:username => 'admin', :password => 'pass')
+    assert session.errors.blank?
+    assert_equal admin.token_auth, session.token
+  end
+
   def test_token_authentication
     init_token_configuration
     admin = Admin.create!(:username => 'admin', :password => 'pass')
