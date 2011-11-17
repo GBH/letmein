@@ -89,7 +89,9 @@ Token authentication provides a simple solution for exposing APIs. When enabled,
 
 Its usage differs from the *email/password* combo in only one way:
 
-    @session = UserSession.new(params[:auth_token])
+    @session = UserSession.new(:auth_token => "258082e5588dea110592154f48ef1e309a8bbff5")
+
+This will successfully (or not) authenticate you with the token above.
 
 Overriding Session Authentication
 =================================
