@@ -1,5 +1,5 @@
 require 'active_record'
-require 'active_support/secure_random'
+require 'securerandom'
 require 'bcrypt'
 
 module LetMeIn
