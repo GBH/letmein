@@ -145,9 +145,9 @@ module LetMeIn
 
         define_method :generate_token do
           i = LetMeIn.config.models.index(self.class.to_s)
-          t = LetMeIn.accessor(:token, i)
-          unless self.send(t)
-            if LetMeIn.config.generate_tokens[i]
+          if LetMeIn.config.generate_tokens[i]
+            t = LetMeIn.accessor(:token, i)
+            unless self.send(t).present?
               token = nil
               loop do
                 token = SecureRandom.hex(20)
