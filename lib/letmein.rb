@@ -111,6 +111,10 @@ module LetMeIn
         before_save :encrypt_password
         
         define_method :encrypt_password do
+          unless LetMeIn.config.models.index(self.class.to_s)
+            raise(LetMeIn::Error, "#{self.class.to_s} must be added to your LetMeIn initializer") 
+          end
+
           if password.present?
             p = LetMeIn.accessor(:password, LetMeIn.config.models.index(self.class.to_s))
             s = LetMeIn.accessor(:salt, LetMeIn.config.models.index(self.class.to_s))
