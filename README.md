@@ -56,7 +56,11 @@ There are no built-in routes/controllers/views/helpers or anything. I'm confiden
       def create
         @session = UserSession.new(params[:user_session])
         @session.save!
+        
+        # Store the user in session and get a fresh session id
         session[:user_id] = @session.user.id
+        request.session_options[:renew] = true
+        
         flash[:notice] = "Welcome back #{@session.user.name}!"
         redirect_to '/'
         
