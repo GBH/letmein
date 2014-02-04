@@ -9,6 +9,7 @@ ActiveRecord::Base.establish_connection(:adapter => 'sqlite3', :database => ':me
 ActiveRecord::Base.logger = Logger.new($stdout)
 
 class User  < ActiveRecord::Base ; end
+class SubUser < User             ; end
 class Admin < ActiveRecord::Base ; end
 
 class OpenSession < LetMeIn::Session
@@ -223,4 +224,13 @@ class LetMeInTest < Test::Unit::TestCase
     assert session.valid?
     assert_equal admin, session.admin
   end
+
+  def test_throw_error_for_model_not_found
+    begin
+      user = SubUser.create!(:email => 'test@test.test', :password => 'pass')
+    rescue LetMeIn::Error => e
+      assert_equal 'SubUser must be added to your LetMeIn initializer', e.to_s
+    end
+  end
+  
 end
