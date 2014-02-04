@@ -1,4 +1,5 @@
 require 'active_record'
+require 'securerandom'
 require 'bcrypt'
 
 module LetMeIn
@@ -17,13 +18,15 @@ module LetMeIn
   #     conf.identifier = 'username'
   #   end
   class Config
-    ACCESSORS = %w(models attributes passwords salts)
+    ACCESSORS = %w(models attributes passwords salts tokens generate_tokens)
     attr_accessor *ACCESSORS
     def initialize
-      @models       = ['User']
-      @attributes   = ['email']
-      @passwords    = ['password_hash']
-      @salts        = ['password_salt']
+      @models           = ['User']
+      @attributes       = ['email']
+      @passwords        = ['password_hash']
+      @salts            = ['password_salt']
+      @tokens           = ['auth_token']
+      @generate_tokens  = [false]
     end
     ACCESSORS.each do |a|
       define_method("#{a.singularize}=") do |val|
@@ -48,6 +51,7 @@ module LetMeIn
     
     attr_accessor :login,       # test@test.test
                   :password,    # secretpassword
+                  :token,       # 40 char, hex, single token authentication
                   :object       # authenticated object
                   
     validate :authenticate
@@ -59,6 +63,7 @@ module LetMeIn
       self.class.attribute  ||= LetMeIn.accessor(:attribute, LetMeIn.config.models.index(self.class.model))
       self.login      = params[:login] || params[self.class.attribute.to_sym]
       self.password   = params[:password]
+      self.token      = params[self.token_attribute.to_sym] if allow_tokens?
     end
     
     def save
@@ -87,11 +92,18 @@ module LetMeIn
     end
     
     def authenticate
-      p = LetMeIn.accessor(:password, LetMeIn.config.models.index(self.class.model))
-      s = LetMeIn.accessor(:salt, LetMeIn.config.models.index(self.class.model))
+      unless self.token
+        p = LetMeIn.accessor(:password, LetMeIn.config.models.index(self.class.model))
+        s = LetMeIn.accessor(:salt, LetMeIn.config.models.index(self.class.model))
+        
+        object = self.class.model.constantize.where(self.class.attribute => self.login).first
+        self.object = object if object && !object.send(p).blank? && object.send(p) == BCrypt::Engine.hash_secret(self.password, object.send(s))
+      else
+        self.object = self.class.model.constantize.where(self.token_attribute => self.token).first
+      end
       
-      object = self.class.model.constantize.where("#{self.class.attribute}" => self.login).first
-      self.object = if object && !object.send(p).blank? && object.send(p) == BCrypt::Engine.hash_secret(self.password, object.send(s))
+      if self.object
+        self.token = self.object.send(self.token_attribute) if allow_tokens?
         object
       else
         errors.add :base, 'Failed to authenticate'
@@ -102,6 +114,17 @@ module LetMeIn
     def to_key
       nil
     end
+
+    protected
+
+      def token_attribute
+        LetMeIn.accessor(:token, LetMeIn.config.models.index(self.class.model))
+      end
+
+      def allow_tokens?
+        LetMeIn.config.generate_tokens[LetMeIn.config.models.index(self.class.model)] ? true : false
+      end
+
   end
   
   module Model
@@ -109,13 +132,33 @@ module LetMeIn
       base.instance_eval do
         attr_accessor :password
         before_save :encrypt_password
+        before_save :generate_token
         
         define_method :encrypt_password do
+          unless LetMeIn.config.models.index(self.class.to_s)
+            raise(LetMeIn::Error, "#{self.class.to_s} must be added to your LetMeIn initializer") 
+          end
+
           if password.present?
             p = LetMeIn.accessor(:password, LetMeIn.config.models.index(self.class.to_s))
             s = LetMeIn.accessor(:salt, LetMeIn.config.models.index(self.class.to_s))
             self.send("#{s}=", BCrypt::Engine.generate_salt)
             self.send("#{p}=", BCrypt::Engine.hash_secret(password, self.send(s)))
+          end
+        end
+
+        define_method :generate_token do
+          i = LetMeIn.config.models.index(self.class.to_s)
+          if LetMeIn.config.generate_tokens[i]
+            t = LetMeIn.accessor(:token, i)
+            unless self.send(t).present?
+              token = nil
+              loop do
+                token = SecureRandom.hex(20)
+                break token unless base.where(t => token).exists?
+              end
+              self.send("#{t}=", token)
+            end
           end
         end
       end

@@ -9,6 +9,7 @@ ActiveRecord::Base.establish_connection(:adapter => 'sqlite3', :database => ':me
 ActiveRecord::Base.logger = Logger.new($stdout)
 
 class User  < ActiveRecord::Base ; end
+class SubUser < User             ; end
 class Admin < ActiveRecord::Base ; end
 
 class OpenSession < LetMeIn::Session
@@ -40,11 +41,13 @@ class LetMeInTest < Test::Unit::TestCase
         t.column :email,          :string
         t.column :password_hash,  :string
         t.column :password_salt,  :string
+        t.column :auth_token,     :string
       end
       create_table :admins do |t|
         t.column :username,   :string
         t.column :pass_hash,  :string
         t.column :pass_salt,  :string
+        t.column :token_auth, :string
       end
     end
     init_default_configuration
@@ -53,10 +56,12 @@ class LetMeInTest < Test::Unit::TestCase
   def init_default_configuration
     remove_session_classes
     LetMeIn.configure do |c|
-      c.models      = ['User']
-      c.attributes  = ['email']
-      c.passwords   = ['password_hash']
-      c.salts       = ['password_salt']
+      c.models          = ['User']
+      c.attributes      = ['email']
+      c.passwords       = ['password_hash']
+      c.salts           = ['password_salt']
+      c.tokens          = ['auth_token']
+      c.generate_tokens = [false]
     end
     LetMeIn.initialize
   end
@@ -64,14 +69,29 @@ class LetMeInTest < Test::Unit::TestCase
   def init_custom_configuration
     remove_session_classes
     LetMeIn.configure do |c|
-      c.models      = ['User', 'Admin']
-      c.attributes  = ['email', 'username']
-      c.passwords   = ['password_hash', 'pass_hash']
-      c.salts       = ['password_salt', 'pass_salt']
+      c.models          = ['User', 'Admin']
+      c.attributes      = ['email', 'username']
+      c.passwords       = ['password_hash', 'pass_hash']
+      c.salts           = ['password_salt', 'pass_salt']
+      c.tokens          = ['auth_token', 'token_auth']
+      c.generate_tokens = [false, false]
     end
     LetMeIn.initialize
   end
-  
+
+  def init_token_configuration
+    remove_session_classes
+    LetMeIn.configure do |c|
+      c.models          = ['User', 'Admin']
+      c.attributes      = ['email', 'username']
+      c.passwords       = ['password_hash', 'pass_hash']
+      c.salts           = ['password_salt', 'pass_salt']
+      c.tokens          = ['auth_token', 'token_auth']
+      c.generate_tokens = [false, true]
+    end
+    LetMeIn.initialize    
+  end
+
   def remove_session_classes
     Object.send(:remove_const, :UserSession)  rescue nil
     Object.send(:remove_const, :AdminSession) rescue nil
@@ -90,6 +110,7 @@ class LetMeInTest < Test::Unit::TestCase
     assert_equal ['email'],         LetMeIn.config.attributes
     assert_equal ['password_hash'], LetMeIn.config.passwords
     assert_equal ['password_salt'], LetMeIn.config.salts
+    assert_equal ['auth_token'],    LetMeIn.config.tokens
   end
   
   def test_custom_configuration_initialization
@@ -98,11 +119,13 @@ class LetMeInTest < Test::Unit::TestCase
       c.attribute   = 'username'
       c.password    = 'encrypted_pass'
       c.salt        = 'salt'
+      c.token       = 'token_auth'
     end
     assert_equal ['Account'],         LetMeIn.config.models
     assert_equal ['username'],        LetMeIn.config.attributes
     assert_equal ['encrypted_pass'],  LetMeIn.config.passwords
     assert_equal ['salt'],            LetMeIn.config.salts
+    assert_equal ['token_auth'],      LetMeIn.config.tokens
   end
   
   def test_model_integration
@@ -223,4 +246,84 @@ class LetMeInTest < Test::Unit::TestCase
     assert session.valid?
     assert_equal admin, session.admin
   end
+
+  def test_throw_error_for_model_not_found
+    begin
+      user = SubUser.create!(:email => 'test@test.test', :password => 'pass')
+    rescue LetMeIn::Error => e
+      assert_equal 'SubUser must be added to your LetMeIn initializer', e.to_s
+    end
+  end
+  
+  # Token Authentication Related
+
+  def test_generate_token_false_by_default
+    init_default_configuration
+    user = User.create!(:email => 'test@test.test', :password => 'pass')
+    assert_equal [false], LetMeIn.config.generate_tokens
+    assert_nil user.auth_token
+  end
+
+  def test_generate_token
+    init_token_configuration
+    admin = Admin.create!(:username => 'admin', :password => 'pass')
+    assert_match /^.{40}$/, admin.token_auth
+  end
+
+  def test_token_session_init
+    init_token_configuration
+    session = AdminSession.new(:token_auth => "29dkd38kduhuf88wldke21")
+    assert_equal "29dkd38kduhuf88wldke21", session.token
+    assert_nil session.object
+    assert_nil session.admin
+  end
+
+  def test_ignore_token_session_init
+    init_default_configuration
+    session = UserSession.new(:auth_token => "29dkd38kduhuf88wldke21")
+    assert_nil session.token
+    assert_nil session.object
+    assert_nil session.user
+  end
+
+  def test_return_token_if_available
+    init_token_configuration
+    admin = Admin.create!(:username => 'admin', :password => 'pass')
+    session = AdminSession.create(:username => 'admin', :password => 'pass')
+    assert session.errors.blank?
+    assert_equal admin.token_auth, session.token
+  end
+
+  def test_token_authentication
+    init_token_configuration
+    admin = Admin.create!(:username => 'admin', :password => 'pass')
+    session = AdminSession.create(:token_auth => admin.token_auth)
+    assert session.errors.blank?
+    assert_equal admin, session.object
+    assert_equal admin, session.admin
+  end
+
+  def test_token_authentication_failure
+    init_token_configuration
+    admin = Admin.create!(:username => 'admin', :password => 'pass')
+    session = AdminSession.create(:token_auth => 'bad_token')
+    assert session.errors.present?
+    assert_equal 'Failed to authenticate', session.errors[:base].first
+    assert_nil session.object
+    assert_nil session.admin
+  end
+
+  def test_token_authentication_exception
+    init_token_configuration
+    admin = Admin.create!(:username => 'admin', :password => 'pass')
+    session = AdminSession.new(:token_auth => 'bad_token')
+    begin
+      session.save!
+    rescue LetMeIn::Error => e
+      assert_equal 'Failed to authenticate', e.to_s
+    end
+    assert_nil session.object
+    assert_nil session.admin
+  end
+
 end
